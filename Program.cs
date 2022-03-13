@@ -3,4 +3,5 @@ Console.WriteLine(ss);
 foreach (var ep in ss.Episodes)
 {
     Console.WriteLine(ep);
+    Console.WriteLine(await BiliApiClient.GetVideoInfo(ep.BVId));
 }
