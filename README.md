@@ -1,2 +1,2 @@
 # BilibiliDownload
-A cli tool downloads Bilibili videos
+A CLI tool downloads Bilibili videos
