@@ -1,0 +1,4 @@
+#VS Code & .Net
+.vscode/
+bin/
+obj/
