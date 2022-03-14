@@ -1,7 +1,12 @@
-﻿var ss = await BiliApiClient.GetSeasonInfo(40156);
+﻿var ss = await BiliApis.GetSeasonInfo(40156);
 Console.WriteLine(ss);
 foreach (var ep in ss.Episodes)
 {
     Console.WriteLine(ep);
-    Console.WriteLine(await BiliApiClient.GetVideoInfo(ep.BVId));
+}
+var vid = await BiliApis.GetVideoInfo("BV1ex411J7GE");
+Console.WriteLine(vid);
+foreach(var page in vid.Pages)
+{
+    Console.WriteLine(page);
 }
