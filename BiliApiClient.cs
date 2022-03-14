@@ -21,7 +21,7 @@ static partial class BiliApis
             httpClient.DefaultRequestHeaders.Add("referer", "https://www.bilibili.com/");
         }
 
-        public static async Task<T> GetAsync(string requestUri)
+        public static async Task<T?> GetAsync(string requestUri)
         {
             try
             {
