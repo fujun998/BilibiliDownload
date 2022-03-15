@@ -1,10 +1,9 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Net.Http.Json;
 
 static partial class BiliApis
 {
-    static class BiliApiClient<T>
+    static partial class BiliApiClient<T>
     {
         static readonly HttpClient httpClient = new();
 
@@ -35,26 +34,12 @@ static partial class BiliApis
                 }
                 else
                 {
-                    throw new Exception(resRoot.GetProperty("message").GetString());
+                    throw resJson.Deserialize<BiliException>(serializerOptions);
                 }
             }
             catch
             {
                 throw;
-            }
-        }
-
-        class UnderscoreNamingPolicy : JsonNamingPolicy
-        {
-            public override string ConvertName(string name)
-            {
-                return Regex.Replace(name, @"[A-Z]+[a-z]+", new MatchEvaluator(Convert));
-            }
-
-            string Convert(Match match)
-            {
-                Console.WriteLine(match.Value);
-                return match.Index > 0 ? match.Value.ToLower().Insert(0, "_") : match.Value.ToLower();
             }
         }
     }
