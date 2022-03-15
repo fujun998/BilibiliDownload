@@ -5,7 +5,14 @@ static partial class BiliApis
 {
     static partial class BiliApiClient<T>
     {
-        static readonly HttpClient httpClient = new();
+        static readonly HttpClient httpClient = new()
+        {
+            BaseAddress = new Uri("https://api.bilibili.com/"),
+            DefaultRequestHeaders={
+                {"user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36 Edg/84.0.522.63"},
+                {"referer", "https://www.bilibili.com/"}
+            }
+        };
 
         static readonly JsonSerializerOptions serializerOptions = new()
         {
@@ -13,28 +20,25 @@ static partial class BiliApis
             PropertyNamingPolicy = new UnderscoreNamingPolicy()
         };
 
-        static BiliApiClient()
-        {
-            httpClient.BaseAddress = new Uri("https://api.bilibili.com/");
-            httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36 Edg/84.0.522.63");
-            httpClient.DefaultRequestHeaders.Add("referer", "https://www.bilibili.com/");
-        }
+        record BiliApiResponse<TResult>(int Code, T? Data, T? Result, string? Message);
+        //使用Data还是Result应根据具体API的返回值而定
 
-        public static async Task<T?> GetAsync(string requestUri)
+        public static async Task<T> GetAsync(string requestUri)
         {
             try
             {
-                using var resJson = JsonDocument.Parse(await httpClient.GetStreamAsync(requestUri));
-                JsonElement resRoot = resJson.RootElement;
-                int code = resRoot.GetProperty("code").GetInt32();
-                if (code == 0)
+                var res = await httpClient.GetFromJsonAsync<BiliApiResponse<T>>(requestUri, serializerOptions);
+                if (res.Data is not null)
                 {
-                    if (!resRoot.TryGetProperty("result", out JsonElement resElem)) resElem = resRoot.GetProperty("data");
-                    return resElem.Deserialize<T>(serializerOptions);
+                    return res.Data;
+                }
+                else if (res.Result is not null)
+                {
+                    return res.Result;
                 }
                 else
                 {
-                    throw resJson.Deserialize<BiliException>(serializerOptions);
+                    throw new BiliApiException(res.Code, res.Message);
                 }
             }
             catch

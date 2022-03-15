@@ -1,12 +1,12 @@
-[System.Serializable]
-class BiliException : Exception
+[Serializable]
+class BiliApiException : Exception
 {
     public int Code{ get; }
-    public BiliException(int code, string? message) : base(message)
+    public BiliApiException(int code, string? message) : base(message)
     {
         Code = code;
     }
-    protected BiliException(
+    protected BiliApiException(
         System.Runtime.Serialization.SerializationInfo info,
         System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 }

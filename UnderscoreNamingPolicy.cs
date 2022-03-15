@@ -10,7 +10,6 @@ class UnderscoreNamingPolicy : JsonNamingPolicy
 
     string Convert(Match match)
     {
-        Console.WriteLine(match.Value);
         return match.Index > 0 ? match.Value.ToLower().Insert(0, "_") : match.Value.ToLower();
     }
 }
