@@ -1,19 +1,46 @@
 using System.Text.Json.Serialization;
 
-record BiliVideo(string Title, string BVId, long Cid, long Duration, BiliVideoDimension Dimension, BiliVideoPage[] Pages);
+abstract class BiliResponse
+{
+    public string RawJson{ get; set; }
 
-record BiliVideoPage(long Cid, int Page, long Duration, BiliVideoDimension Dimension, string Part);
+    public override string ToString()
+    {
+        return RawJson;
+    }
+}
+
+class BiliVideo : BiliResponse
+{
+    public string Title { get; set; }
+    public string BVId { get; set; }
+    public long Cid { get; set; }
+    public long Duration { get; set; }
+    public BiliVideoDimension Dimension { get; set; }
+    public List<BiliVideoPage> Pages { get; } = new();
+}
+
+record struct BiliVideoPage(long Cid, int Page, long Duration, BiliVideoDimension Dimension, string Part);
 
 record struct BiliVideoDimension(int Width, int Height, int Rotate);
 
 
-record BiliSeason(BiliEpisode[] Episodes, string Title, string Evaluate);
+class BiliSeason : BiliResponse
+{
 
-record BiliEpisode(string Title, string BVId, long Cid, long Duration, BiliVideoDimension Dimension, string LongTitle);
+    public string Title { get; set; }
+    public string Evaluate { get; set; }
+    public List<BiliEpisode> Episodes { get; } = new();
+}
+
+record struct BiliEpisode(string Title, string BVId, long Cid, long Duration, BiliVideoDimension Dimension, string LongTitle);
 
 
-record BiliVideoPlayUrl(BiliVideoDashInfo Dash);
+class BiliPlayUrl : BiliResponse
+{
+    public BiliVideoDashInfo Dash { get; set; }
+}
 
-record BiliVideoDashInfo(BiliDashUrl[] Video, BiliDashUrl[] Audio);
+record struct BiliVideoDashInfo(BiliDashUrl[] Video, BiliDashUrl[] Audio);
 
-record BiliDashUrl(int Id, int Width, int Height, string FrameRate, int Codecid, string Codecs, string BaseUrl);
+record struct BiliDashUrl(int Id, int Width, int Height, string FrameRate, int Codecid, string Codecs, string BaseUrl);
