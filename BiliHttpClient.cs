@@ -53,4 +53,16 @@ static class BiliHttpClient
             throw;
         }
     }
+
+    public static async Task<HttpResponseMessage> GetAsync(string requestUri)
+    {
+        try
+        {
+            return await httpClient.GetAsync(requestUri);
+        }
+        catch
+        {
+            throw;
+        }
+    }
 }

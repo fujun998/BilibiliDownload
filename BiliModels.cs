@@ -30,7 +30,7 @@ class BiliSeason : BiliResponse
 
     public string Title { get; set; }
     public string Evaluate { get; set; }
-    public List<BiliEpisode> Episodes { get; } = new();
+    public BiliEpisode[] Episodes { get; set; }
 }
 
 record struct BiliEpisode(string Title, string BVId, long Cid, long Duration, BiliVideoDimension Dimension, string LongTitle);
@@ -39,8 +39,13 @@ record struct BiliEpisode(string Title, string BVId, long Cid, long Duration, Bi
 class BiliPlayUrl : BiliResponse
 {
     public BiliVideoDashInfo Dash { get; set; }
+    public long Timelength { get; set; }
+    public BiliQuality[] AcceptQuality { get; set; }
+    public BiliVideoFormat[] SupportFormats { get; set; }
 }
 
 record struct BiliVideoDashInfo(BiliDashUrl[] Video, BiliDashUrl[] Audio);
 
-record struct BiliDashUrl(int Id, int Width, int Height, string FrameRate, int Codecid, string Codecs, string BaseUrl);
+record struct BiliDashUrl(int Id, int Width, int Height, string FrameRate, int Codecid, string Codecs, long Bandwidth, string BaseUrl);
+
+record struct BiliVideoFormat(BiliQuality Quality, string NewDescription, string[] Codecs);
