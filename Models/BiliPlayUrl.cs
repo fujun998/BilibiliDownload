@@ -24,11 +24,9 @@ class BiliDashUrl
     public string FrameRate { get; set; }
     
     [JsonPropertyName("codecid")]
-    public int CodecId { get; set; }
+    public BiliCodec CodecId { get; set; }
     public string Codecs { get; set; }
-    
-    [JsonPropertyName("bandwidth")]
-    public long BandWidth { get; set; }
+    public long Bandwidth { get; set; }
     public string BaseUrl { get; set; }
 }
 
