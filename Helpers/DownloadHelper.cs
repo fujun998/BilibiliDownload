@@ -26,7 +26,7 @@ static class DownloadHelper
             {
                 await Download(
                     playUrl.Dash.Video
-                        .Where(dash => dash.Quality <= options.Quality && dash.Codecs.StartsWith(options.Codec))
+                        .Where(dash => dash.Quality <= options.Quality && dash.CodecId <= options.CodecId)
                         .First().BaseUrl,
                     $"{path}.video.mp4"
                 );
@@ -107,7 +107,7 @@ static class DownloadHelper
                 (from ep in season.Episodes
                  select DownloadVideo(
                      ep.BVId, ep.CId,
-                     new DownloadOptions() { Quality = options.Quality, Codec = options.Codec, Directory = options.Directory, DownloadTypes = options.DownloadTypes & (~DownloadType.Cover) },
+                     new DownloadOptions() { Quality = options.Quality, CodecId = options.CodecId, Directory = options.Directory, DownloadTypes = options.DownloadTypes & (~DownloadType.Cover) },
                      ep.GetFullTitle(season.Title))
                 ).ToArray()
             );
@@ -122,7 +122,7 @@ static class DownloadHelper
 class DownloadOptions
 {
     public Quality Quality { get; set; } = Quality._8K;
-    public string Codec { get; set; } = "";
+    public int CodecId { get; set; } = 12;
     public string Directory { get; set; } = "output";
     public DownloadType DownloadTypes { get; set; } = DownloadType.Video | DownloadType.Audio;
 }
