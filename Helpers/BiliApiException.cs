@@ -1,7 +1,7 @@
 [Serializable]
 class BiliApiException : Exception
 {
-    public int Code{ get; }
+    public int Code { get; }
     public BiliApiException(int code, string? message) : base(message)
     {
         Code = code;

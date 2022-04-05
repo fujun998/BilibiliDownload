@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 
 static class BiliHttpClient
 {
-    static readonly HttpClient httpClient = new()
+    static readonly HttpClient httpClient = new(new HttpClientHandler() { UseCookies = false })
     {
         BaseAddress = new Uri("https://api.bilibili.com/"),
         DefaultRequestHeaders ={
@@ -15,14 +15,20 @@ static class BiliHttpClient
     static readonly JsonSerializerOptions serializerOptions = new()
     {
         //PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = new UnderscoreNamingPolicy()
+        PropertyNamingPolicy = new UnderscoreNamingPolicy(),
     };
-
-    public static async Task<T> GetFromJsonAsync<T>(string requestUri) where T : BiliResponse
+    public static async Task<T> GetFromJsonAsync<T>(string requestUri, string cookies = "") where T : BiliResponse
     {
         try
         {
-            using var resJson = JsonDocument.Parse(await httpClient.GetStreamAsync(requestUri));
+            using var resJson = JsonDocument.Parse(
+                await httpClient.SendAsync(
+                    new HttpRequestMessage(HttpMethod.Get, requestUri)
+                    {
+                        Headers = { { "Cookie", $"{cookies}" } }
+                    }
+                ).Result.Content.ReadAsStreamAsync()
+            );
 
             if (resJson.RootElement.TryGetProperty("data", out JsonElement resElem) ||
                 resJson.RootElement.TryGetProperty("result", out resElem))
