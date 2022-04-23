@@ -1,14 +1,30 @@
+using System.IO.Compression;
 using System.Text.Json;
 
 static class DownloadHelper
 {
-    public static async Task Download(string url, string path)
+    static Aria2NET.Aria2NetClient ariaClient = new("http://localhost:6800/jsonrpc");
+
+    public static async Task Download(string url, string path, bool isLarge = false)
     {
         try
         {
-            Console.WriteLine(url);
-            var srcStream = await BiliHttpClient.GetStreamAsync(url);
-            await srcStream.CopyToAsync(File.OpenWrite(path));
+            if (true)
+            {
+                var srcStream = await BiliHttpClient.GetStreamAsync(url);
+                await srcStream.CopyToAsync(File.Create(path));
+            }
+            else
+            {
+                await ariaClient.AddUri(
+                    new List<string> { url },
+                    new Dictionary<string, object>
+                    {
+                        { "dir", Path.GetDirectoryName(Path.GetFullPath(path)) },
+                        { "out", Path.GetFileName(path) },
+                        { "referer", "https://www.bilibili.com/" }
+                    });
+            }
         }
         catch
         {
@@ -22,26 +38,27 @@ static class DownloadHelper
 
         try
         {
+            if (options.DownloadTypes.HasFlag(DownloadType.Audio))
+            {
+                if (playUrl.Dash.Dolby is not null)
+                {
+                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, $"{path}.audio.mp4", true);
+                }
+                else
+                {
+                    await Download(playUrl.Dash.Audio.Max().BaseUrl, $"{path}.audio.mp4", true);
+                }
+            }
+
             if (options.DownloadTypes.HasFlag(DownloadType.Video))
             {
                 await Download(
                     playUrl.Dash.Video
                         .Where(dash => dash.Quality <= options.Quality && dash.CodecId <= options.CodecId)
                         .First().BaseUrl,
-                    $"{path}.video.mp4"
+                    $"{path}.video.mp4",
+                    true
                 );
-            }
-
-            if (options.DownloadTypes.HasFlag(DownloadType.Audio))
-            {
-                if (playUrl.Dash.Dolby is not null)
-                {
-                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, $"{path}.audio.mp4");
-                }
-                else
-                {
-                    await Download(playUrl.Dash.Audio.Max().BaseUrl, $"{path}.audio.mp4");
-                }
             }
         }
         catch
@@ -50,16 +67,13 @@ static class DownloadHelper
         }
     }
 
-    public static async Task DownloadVideo(string bvid, long cid, DownloadOptions options, string? title = null)
+    public static async Task DownloadVideo(string bvid, long cid, DownloadOptions options)
     {
         try
         {
             Video video = await BiliApis.GetVideoInfo(bvid);
 
-            if (string.IsNullOrEmpty(title))
-            {
-                title = video.Title;
-            }
+            string title = string.IsNullOrEmpty(options.Title) ? video.Title : options.Title;
 
             string basePath = Path.Join(options.Directory, title);
 
@@ -70,14 +84,14 @@ static class DownloadHelper
 
             if (options.DownloadTypes.HasFlag(DownloadType.Dm))
             {
-                await Download($"http://api.bilibili.com/x/v1/dm/list.so?oid={cid}", basePath + ".danmuku.xml");
+                await Download($"http://api.bilibili.com/x/v1/dm/list.so?oid={cid}", basePath + ".dm.xml");
             }
 
             if (options.DownloadTypes.HasFlag(DownloadType.Subtitle))
             {
-                foreach (var sub in video.Subtitle.List.Where(sub => sub.Language.StartsWith(Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName)))
+                foreach (var sub in video.Subtitle.List)
                 {
-                    await Download(sub.SubtitleUrl, basePath + $".{sub.Language}.{sub.SubtitleUrl.Split('.').Last()}");
+                    await Download(sub.SubtitleUrl, $"{basePath}.{sub.Language}.{sub.SubtitleUrl.Split('.').Last()}");
                 }
             }
 
@@ -93,22 +107,25 @@ static class DownloadHelper
     {
         try
         {
-            //if (options.DownloadTypes.HasFlag(DownloadType.Info))
-            {
-                File.WriteAllText(Path.Join(options.Directory, $"{season.Title}.json"), season.ToString());
-            }
+            File.WriteAllText(Path.Join(options.Directory, $"seasoninfo.json"), season.RawJson);
 
             if (options.DownloadTypes.HasFlag(DownloadType.Cover))
             {
-                await Download(season.CoverUrl, Path.Join(options.Directory, $"{season.Title}.{season.CoverUrl.Split('.').Last()}"));
+                await Download(season.CoverUrl, Path.Join(options.Directory, $"cover.{season.CoverUrl.Split('.').Last()}"));
             }
 
             Task.WaitAll(
                 (from ep in season.Episodes
                  select DownloadVideo(
                      ep.BVId, ep.CId,
-                     new DownloadOptions() { Quality = options.Quality, CodecId = options.CodecId, Directory = options.Directory, DownloadTypes = options.DownloadTypes & (~DownloadType.Cover) },
-                     ep.GetFullTitle(season.Title))
+                     new DownloadOptions()
+                     {
+                         Quality = options.Quality,
+                         CodecId = options.CodecId,
+                         Directory = options.Directory,
+                         DownloadTypes = options.DownloadTypes & (~DownloadType.Cover),
+                         Title = string.IsNullOrEmpty(options.Title) ? ep.GetFullTitle(season.Title) : ep.GetFullTitle(options.Title)
+                     })
                 ).ToArray()
             );
         }
@@ -121,6 +138,7 @@ static class DownloadHelper
 
 class DownloadOptions
 {
+    public string? Title { get; set; }
     public Quality Quality { get; set; } = Quality._8K;
     public int CodecId { get; set; } = 12;
     public string Directory { get; set; } = "output";
