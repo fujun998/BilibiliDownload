@@ -71,4 +71,16 @@ static class BiliHttpClient
             throw;
         }
     }
+
+    public static async Task<byte[]> GetByteArrayAsync(string requestUri)
+    {
+        try
+        {
+            return await httpClient.GetByteArrayAsync(requestUri);
+        }
+        catch
+        {
+            throw;
+        }
+    }
 }

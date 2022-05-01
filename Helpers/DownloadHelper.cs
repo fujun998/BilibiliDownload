@@ -1,15 +1,27 @@
 using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 
 static class DownloadHelper
 {
     static Aria2NET.Aria2NetClient ariaClient = new("http://localhost:6800/jsonrpc");
 
+    static string FixPath(string filename)
+    {
+        string res = filename.Replace('<', '＜')
+        .Replace('>', '＞')
+        .Replace(':', '：')
+        .Replace('|', '｜')
+        .Replace('?', '？');
+        return res;
+    }
+
     public static async Task Download(string url, string path, bool isLarge = false)
     {
+        path = FixPath(path);
         try
         {
-            if (true)
+            if (!isLarge)
             {
                 var srcStream = await BiliHttpClient.GetStreamAsync(url);
                 await srcStream.CopyToAsync(File.Create(path));
@@ -67,6 +79,32 @@ static class DownloadHelper
         }
     }
 
+    public static async Task DownloadSubtitles(SubtitleInfo subtitles, string directory, string title)
+    {
+        JsonElement root;
+        StringBuilder sb = new();
+        TimeSpan from, to;
+        string content;
+        int i = 0;
+        foreach (var sub in subtitles.List)
+        {
+            i = 0;
+            root = JsonDocument.Parse(await BiliHttpClient.GetStreamAsync(sub.SubtitleUrl)).RootElement;
+            sb.Clear();
+            foreach (var line in root.GetProperty("body").EnumerateArray())
+            {
+                from = TimeSpan.FromSeconds(line.GetProperty("from").GetDouble());
+                to = TimeSpan.FromSeconds(line.GetProperty("to").GetDouble());
+                content = line.GetProperty("content").GetString();
+                sb.AppendLine(i++.ToString());
+                sb.AppendLine($"{from.ToString(@"hh\:mm\:ss\.fff")} --> {to.ToString(@"hh\:mm\:ss\.fff")}");
+                sb.AppendLine(content);
+                sb.AppendLine();
+            }
+            File.WriteAllText(FixPath(Path.Join(directory, $"{title}.{sub.Language}.srt")), sb.ToString());
+        }
+    }
+
     public static async Task DownloadVideo(string bvid, long cid, DownloadOptions options)
     {
         try
@@ -89,10 +127,7 @@ static class DownloadHelper
 
             if (options.DownloadTypes.HasFlag(DownloadType.Subtitle))
             {
-                foreach (var sub in video.Subtitle.List)
-                {
-                    await Download(sub.SubtitleUrl, $"{basePath}.{sub.Language}.{sub.SubtitleUrl.Split('.').Last()}");
-                }
+                await DownloadSubtitles(video.Subtitle, options.Directory, title);
             }
 
             await DownloadDash(await BiliApis.GetPlayUrlAsync(bvid, cid), title, options);
@@ -107,7 +142,9 @@ static class DownloadHelper
     {
         try
         {
-            File.WriteAllText(Path.Join(options.Directory, $"seasoninfo.json"), season.RawJson);
+            string title = string.IsNullOrEmpty(options.Title) ? season.Title : options.Title;
+
+            File.WriteAllText(Path.Join(options.Directory, $"{title}.json"), season.RawJson);
 
             if (options.DownloadTypes.HasFlag(DownloadType.Cover))
             {
@@ -124,7 +161,7 @@ static class DownloadHelper
                          CodecId = options.CodecId,
                          Directory = options.Directory,
                          DownloadTypes = options.DownloadTypes & (~DownloadType.Cover),
-                         Title = string.IsNullOrEmpty(options.Title) ? ep.GetFullTitle(season.Title) : ep.GetFullTitle(options.Title)
+                         Title = ep.GetFullTitle(title)
                      })
                 ).ToArray()
             );
