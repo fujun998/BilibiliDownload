@@ -6,22 +6,25 @@ static class DownloadHelper
 {
     static Aria2NET.Aria2NetClient ariaClient = new("http://localhost:6800/jsonrpc");
 
-    static string FixPath(string filename)
+    static string FixFilename(string filename)
     {
         string res = filename.Replace('<', '＜')
         .Replace('>', '＞')
         .Replace(':', '：')
         .Replace('|', '｜')
-        .Replace('?', '？');
+        .Replace('?', '？')
+        .Replace('/', '／')
+        .Replace('\\', '＼');
         return res;
     }
 
-    public static async Task Download(string url, string path, bool isLarge = false)
+    public static async Task Download(string url, string directory, string filename, bool isLarge = false)
     {
-        path = FixPath(path);
+        filename = FixFilename(filename);
+        string path = Path.Join(directory, filename);
         try
         {
-            if (!isLarge)
+            if (true)
             {
                 var srcStream = await BiliHttpClient.GetStreamAsync(url);
                 await srcStream.CopyToAsync(File.Create(path));
@@ -54,11 +57,11 @@ static class DownloadHelper
             {
                 if (playUrl.Dash.Dolby is not null)
                 {
-                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, $"{path}.audio.mp4", true);
+                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, options.Directory, $"{title}.audio.mp4", true);
                 }
                 else
                 {
-                    await Download(playUrl.Dash.Audio.Max().BaseUrl, $"{path}.audio.mp4", true);
+                    await Download(playUrl.Dash.Audio.Max().BaseUrl, options.Directory, $"{title}.audio.mp4", true);
                 }
             }
 
@@ -68,7 +71,8 @@ static class DownloadHelper
                     playUrl.Dash.Video
                         .Where(dash => dash.Quality <= options.Quality && dash.CodecId <= options.CodecId)
                         .First().BaseUrl,
-                    $"{path}.video.mp4",
+                    options.Directory,
+                    $"{title}.video.mp4",
                     true
                 );
             }
@@ -101,7 +105,7 @@ static class DownloadHelper
                 sb.AppendLine(content);
                 sb.AppendLine();
             }
-            File.WriteAllText(FixPath(Path.Join(directory, $"{title}.{sub.Language}.srt")), sb.ToString());
+            File.WriteAllText(FixFilename(Path.Join(directory, FixFilename($"{title}.{sub.Language}.srt"))), sb.ToString());
         }
     }
 
@@ -117,12 +121,12 @@ static class DownloadHelper
 
             if (options.DownloadTypes.HasFlag(DownloadType.Cover))
             {
-                await Download(video.CoverUrl, basePath + ".{video.CoverUrl.Split('.').Last()}");
+                await Download(video.CoverUrl, options.Directory, $"{title}.{video.CoverUrl.Split('.').Last()}");
             }
 
             if (options.DownloadTypes.HasFlag(DownloadType.Dm))
             {
-                await Download($"http://api.bilibili.com/x/v1/dm/list.so?oid={cid}", basePath + ".dm.xml");
+                await Download($"http://api.bilibili.com/x/v1/dm/list.so?oid={cid}", options.Directory, $"{title}.dm.xml");
             }
 
             if (options.DownloadTypes.HasFlag(DownloadType.Subtitle))
@@ -148,7 +152,7 @@ static class DownloadHelper
 
             if (options.DownloadTypes.HasFlag(DownloadType.Cover))
             {
-                await Download(season.CoverUrl, Path.Join(options.Directory, $"cover.{season.CoverUrl.Split('.').Last()}"));
+                await Download(season.CoverUrl, options.Directory, $"{title}.{season.CoverUrl.Split('.').Last()}");
             }
 
             Task.WaitAll(
