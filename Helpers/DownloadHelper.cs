@@ -14,7 +14,8 @@ static class DownloadHelper
         .Replace('|', '｜')
         .Replace('?', '？')
         .Replace('/', '／')
-        .Replace('\\', '＼');
+        .Replace('\\', '＼')
+        .Replace('\"', '＂');
         return res;
     }
 
@@ -57,7 +58,7 @@ static class DownloadHelper
             {
                 if (playUrl.Dash.Dolby is not null)
                 {
-                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, options.Directory, $"{title}.audio.mp4", true);
+                    await Download(playUrl.Dash.Dolby.Audio[0].BaseUrl, options.Directory, $"{title}.audio.aac", true);
                 }
                 else
                 {
